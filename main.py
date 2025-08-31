@@ -1,6 +1,7 @@
 import json
 from src.nmap_parser import run_nmap, parse_nmap_xml
 from src.gobuster_parser import run_gobuster, parse_gobuster_output
+from src.nikto_parser import run_nikto, parse_nikto_output # Import the new Nikto functions
 
 def collect_data(target):
     print(f"[+] Starting scan on target: {target}")
@@ -17,8 +18,13 @@ def collect_data(target):
     gobuster_output = run_gobuster(target)
     gobuster_features = parse_gobuster_output(gobuster_output)
     
+    # Run and parse Nikto
+    print("[+] Running Nikto... (This may take a while)")
+    nikto_output = run_nikto(target)
+    nikto_features = parse_nikto_output(nikto_output)
+    
     # Combine all features into one dictionary
-    all_features = {**nmap_features, **gobuster_features}
+    all_features = {**nmap_features, **gobuster_features, **nikto_features}
     
     # Save the features to a JSON file
     output_filename = f"data/{target}_features.json"

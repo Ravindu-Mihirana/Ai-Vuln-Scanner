@@ -9,6 +9,7 @@ Ensure you have the following installed on your Kali Linux system:
 - **Python 3.9+**
 - **Nmap**: `sudo apt update && sudo apt install nmap`
 - **Gobuster**: `sudo apt install gobuster`
+- **Nikto**: `sudo apt install nikto`
 - **Git**: `sudo apt install git`
 
 ### 2. Clone the Repository
@@ -38,6 +39,8 @@ We are in the data collection phase. Please use the provided engine to scan targ
 2. **Run the data collection engine:** `python3 main.py`
 3. **Enter the target IP** when prompted (e.g., `192.168.56.102` for a Metasploitable VM).
 4. The script will run Nmap and Gobuster, then save a features file (`data/<target>_features.json`).
+
+**Note:** Nikto scans can be slow (15-30 minutes per target). Please be patient. This provides crucial data for the AI model.
 
 #### Auto-Labeling Your Scan:
 After scanning a **known vulnerable target** (like Metasploitable), run the labeler script:
