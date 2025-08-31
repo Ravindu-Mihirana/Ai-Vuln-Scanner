@@ -1,0 +1,42 @@
+# .gitignore for Ai-Vuln-Scanner
+
+# Virtual environment files
+venv/
+.env/
+ENV/
+
+# Data files - WE WILL IGNORE THE RAW DATA TO KEEP REPO SIZE SMALL
+data/*_nmap.xml
+data/*_gobuster.txt
+data/*_features.json
+# BUT we will keep the labeled data for training! So we don't ignore labeled_*.json
+!data/labeled_*.json
+
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Large model files (we'll add these later, but ignore for now)
+models/
+*.h5
+*.pkl
+*.model
