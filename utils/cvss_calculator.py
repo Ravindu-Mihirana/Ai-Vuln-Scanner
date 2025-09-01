@@ -44,6 +44,8 @@ def calculate_cvss_base_score(features):
         total_score += 0.3  # Admin interface exposed
     if features.get('path_contains_config', 0) == 1:
         total_score += 0.4  # Config files exposed
+    if features.get('has_uncommon_ports', 0) == 1:
+        total_score += 0.5 + (features.get('other_ports_open', 0) * 0.2)
     
     # Apply CVSS severity ranges
     return _map_to_cvss_range(total_score)
