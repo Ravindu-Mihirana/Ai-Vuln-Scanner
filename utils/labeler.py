@@ -2,8 +2,12 @@
 import json
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from utils.helpers import sanitize_filename  # Add this import
+# Add the project root directory to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+# Now import from utils
+from utils.cvss_calculator import calculate_cvss_base_score
 
 def generate_labels_for_target(target_ip, feature_dict):
     """
