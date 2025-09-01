@@ -1,6 +1,9 @@
 # utils/labeler.py
 import json
 import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from utils.helpers import sanitize_filename  # Add this import
 
 def generate_labels_for_target(target_ip, feature_dict):
     """
@@ -14,25 +17,23 @@ def generate_labels_for_target(target_ip, feature_dict):
         "vuln_directory_traversal": 0,
         "vuln_command_injection": 0,
         "vuln_misconfiguration": 0,
-        "vuln_outdated_service": 1,  # Metasploitable is almost entirely this
-        "cvss_score": 9.0  # Overall, it's a very vulnerable machine
+        "vuln_outdated_service": 0,
+        "cvss_score": 0.0  # Start with 0, will be calculated
     }
     
-    # Specific rules for Metasploitable 2 (192.168.56.102)
-    if target_ip == "192.168.56.102":
-        if feature_dict.get('port_21_open') == 1:
-            # vsftpd 2.3.4 is vulnerable to backdoor command execution
-            labels["vuln_command_injection"] = 1 
-        if feature_dict.get('port_445_open') == 1:
-            # Samba has vulnerabilities
-            labels["vuln_directory_traversal"] = 1
-        if feature_dict.get('port_80_open') == 1:
-            # The web app has many vulns
-            labels["vuln_sqli"] = 1
-            labels["vuln_xss"] = 1
-        labels['vuln_misconfiguration'] = 1 # It has many config issues
-
-    # Add more rules for other known VMs here later (e.g., Juice Shop)
+    # Specific rules for known targets
+    if target_ip == "192.168.56.102":  # Metasploitable
+        labels.update({
+            "vuln_sqli": 1,
+            "vuln_xss": 1,
+            "vuln_directory_traversal": 1,
+            "vuln_command_injection": 1,
+            "vuln_misconfiguration": 1,
+            "vuln_outdated_service": 1
+        })
+    
+    # Calculate REAL CVSS score based on actual features
+    labels['cvss_score'] = calculate_cvss_base_score({**feature_dict, **labels})
     
     return labels
 
@@ -43,7 +44,9 @@ if __name__ == "__main__":
         sys.exit(1)
     
     features_file = sys.argv[1]
-    target_ip = features_file.split('/')[-1].split('_')[0] # Extract IP from filename
+    # Extract the sanitized target name from the filename
+    filename = features_file.split('/')[-1]
+    target_ip = filename.replace('_features.json', '') # Now it gets the safe name
     
     with open(features_file, 'r') as f:
         features = json.load(f)

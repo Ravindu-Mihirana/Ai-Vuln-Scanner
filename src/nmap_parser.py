@@ -1,4 +1,10 @@
 import subprocess
+# Add at the top of the file
+import sys
+import os
+# Add the utils directory to the path so we can import helpers
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from utils.helpers import sanitize_filename  # Add this import
 from libnmap.parser import NmapParser
 
 def run_nmap(target, nmap_arguments="-sV -O"):
@@ -6,6 +12,8 @@ def run_nmap(target, nmap_arguments="-sV -O"):
     xml_file = f"data/{target}_nmap.xml"
     # Sanitize the target and arguments to prevent command injection!
     # This is a basic safety measure. For a real tool, you'd need more robust sanitization.
+    safe_target = sanitize_filename(target)
+    xml_file = f"data/{safe_target}_nmap.xml"
     target = target.replace(";", "").replace("|", "").replace("&", "")
     
     # Use the provided arguments

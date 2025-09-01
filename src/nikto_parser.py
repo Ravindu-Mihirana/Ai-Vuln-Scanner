@@ -1,9 +1,15 @@
 import subprocess
 import re
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from utils.helpers import sanitize_filename  # Add this import
 
 def run_nikto(target):
     """Runs a Nikto scan on the target."""
-    output_file = f"data/{target}_nikto.txt"
+    safe_target = sanitize_filename(target)
+    output_file = f"data/{safe_target}_nikto.txt"
+    #output_file = f"data/{target}_nikto.txt"
     # Ensure target has http:// or https://
     if not target.startswith("http"):
         target = f"http://{target}"

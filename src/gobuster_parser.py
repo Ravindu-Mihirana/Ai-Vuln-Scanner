@@ -1,9 +1,16 @@
 import subprocess
 import re
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from utils.helpers import sanitize_filename  # Add this import
 
 def run_gobuster(target, gobuster_arguments="dir -w /usr/share/wordlists/dirb/common.txt"):
     """Runs a Gobuster scan with user-provided arguments."""
-    output_file = f"data/{target}_gobuster.txt"
+    # SANITIZE THE TARGET NAME FOR THE FILENAME
+    safe_target = sanitize_filename(target)
+    output_file = f"data/{safe_target}_gobuster.txt"
+    #output_file = f"data/{target}_gobuster.txt"
     if not target.startswith("http"):
         target = f"http://{target}"
     
