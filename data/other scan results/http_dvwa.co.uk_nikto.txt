@@ -1,0 +1,9 @@
+- Nikto v2.5.0/
++ Target Host: dvwa.co.uk
++ Target Port: 80
++ GET /: The anti-clickjacking X-Frame-Options header is not present. See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options: 
++ GET /: An alt-svc header was found which is advertising HTTP/3. The endpoint is: ':443'. Nikto cannot test HTTP/3 over QUIC. See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/alt-svc: 
++ GET /: The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type. See: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/: 
++ GET /: Uncommon header 'proxy-status' found, with contents: Cloudflare-Proxy;error=http_request_error.
++ GET /cdn-cgi/trace: Retrieved access-control-allow-origin header: *.
++ GET /cdn-cgi/trace: Cloudflare trace CGI found, which may leak some system information.

@@ -394,7 +394,244 @@ class AIVulnerabilityScanner:
         if file_path:
             self.custom_wordlist_entry.delete(0, tk.END)
             self.custom_wordlist_entry.insert(0, file_path)
+
+    def start_scan(self):
+        """Start the scanning process"""
+        target = self.target_entry.get().strip()
+        if not target:
+            messagebox.showerror("Error", "Please enter a target")
+            return
+            
+        selected_tools = [tool for tool, var in self.tool_vars.items() if var.get()]
+        if not selected_tools:
+            messagebox.showerror("Error", "Please select at least one tool")
+            return
         
+        # Get selected options
+        scan_options = {
+            "nmap_args": self.nmap_custom_entry.get().strip(),
+            "gobuster_wordlist": self.custom_wordlist_entry.get().strip() or self.wordlist_var.get(),
+            "nikto_tuning": self.nikto_tuning_var.get()
+        }
+        
+        self.scanning = True
+        self.start_btn.configure(state="disabled")
+        self.stop_btn.configure(state="normal")
+        self.ai_result_label.configure(text="Scan in progress... AI analysis pending.")
+        self.status_label.configure(text="Scanning...")
+        
+        # Start scanning in a separate thread with options
+        scan_thread = threading.Thread(target=self.run_scan, args=(target, selected_tools, scan_options))
+        scan_thread.daemon = True
+        scan_thread.start()
+
+    def run_scan(self, target, tools, scan_options):
+    	"""Run the actual scan using the scanning engine"""
+    	self.output_text.delete("1.0", tk.END)
+    	self.output_text.insert(tk.END, "Starting scan...\n")
+    	self.window.update()
+    
+    	all_features = {}
+    	scan_successful = True
+    
+    	try:
+    	    # Run Nmap if selected
+    	    if "Nmap" in tools and self.scanning:
+    	        self.output_text.insert(tk.END, f"\n[+] Running Nmap with arguments: {scan_options['nmap_args']}\n")
+    	        self.window.update()
+    	        self.progress_bar.set(0.25)
+    	        self.progress_label.configure(text="Running Nmap...")
+    	        
+    	        # Build the full Nmap command
+    	        nmap_command = scan_options['nmap_args']
+    	        xml_file = run_nmap(target, nmap_command)
+            
+    	        if xml_file and self.scanning:
+    	            nmap_features = parse_nmap_xml(xml_file)
+                
+    	            # Check if nmap_features is None (parsing failed)
+    	            if nmap_features is None:
+    	                self.output_text.insert(tk.END, "[!] Failed to parse Nmap XML results.\n")
+    	                scan_successful = False
+    	            else:
+    	                all_features.update(nmap_features)
+                    
+    	                # Show vulnerability summary
+    	                vuln_text = f"[+] Nmap completed. Found {nmap_features.get('total_open_ports', 0)} open ports.\n"
+    	                if nmap_features.get('critical_vuln_count', 0) > 0:
+    	                    vuln_text += f"[!] CRITICAL: {nmap_features.get('critical_vuln_count', 0)} exploitable vulnerabilities found!\n"
+    	                if nmap_features.get('high_vuln_count', 0) > 0:
+    	                    vuln_text += f"[!] HIGH: {nmap_features.get('high_vuln_count', 0)} high-risk vulnerabilities\n"
+    	                if nmap_features.get('vuln_backdoor_detected', 0) == 1:
+    	                    vuln_text += "[!] BACKDOOR: vsftpd 2.3.4 backdoor detected (CVE-2011-2523)\n"
+    	                if nmap_features.get('vuln_rce_detected', 0) == 1:
+    	                    vuln_text += "[!] RCE: Remote code execution vulnerabilities detected\n"
+    	                if nmap_features.get('vuln_sqli_detected', 0) == 1:
+    	                    vuln_text += "[!] SQLi: SQL injection vulnerabilities detected\n"
+                    
+    	                self.output_text.insert(tk.END, vuln_text)
+                
+    	        else:
+    	            self.output_text.insert(tk.END, "[!] Nmap scan failed or was cancelled.\n")
+    	            scan_successful = False
+            
+    	        self.window.update()
+        
+    	    # Only continue with other tools if Nmap was successful
+    	    if not scan_successful:
+    	        self.output_text.insert(tk.END, "\n[!] Skipping remaining tools due to Nmap failure.\n")
+    	        return
+        
+    	    # Run Gobuster if selected
+    	    if "Gobuster" in tools and self.scanning and scan_successful:
+    	        self.output_text.insert(tk.END, f"\n[+] Running Gobuster with wordlist: {scan_options['gobuster_wordlist']}\n")
+    	        self.window.update()
+    	        self.progress_bar.set(0.5)
+    	        self.progress_label.configure(text="Running Gobuster...")
+            
+    	        # Build Gobuster command
+    	        gobuster_command = f"dir -w {scan_options['gobuster_wordlist']}"
+    	        output_file = run_gobuster(target, gobuster_command)
+            
+    	        if output_file and self.scanning:
+    	            gobuster_features = parse_gobuster_output(output_file)
+    	            if gobuster_features is not None:
+    	                all_features.update(gobuster_features)
+    	                self.output_text.insert(tk.END, f"[+] Gobuster completed. Found {gobuster_features.get('count_path_200', 0)} accessible paths.\n")
+    	            else:
+    	                self.output_text.insert(tk.END, "[!] Failed to parse Gobuster results.\n")
+    	        else:
+    	            self.output_text.insert(tk.END, "[!] Gobuster scan failed or was cancelled.\n")
+            
+    	        self.window.update()
+        
+    	    # Run Nikto if selected
+    	    if "Nikto" in tools and self.scanning and scan_successful:
+    	        self.output_text.insert(tk.END, f"\n[+] Running Nikto with tuning: {scan_options['nikto_tuning']}\n")
+    	        self.window.update()
+    	        self.progress_bar.set(0.75)
+    	        self.progress_label.configure(text="Running Nikto...")
+            
+    	        # Nikto doesn't accept custom arguments in our current implementation
+    	        output_file = run_nikto(target)  # Only pass target, no second argument
+            
+    	        if output_file and self.scanning:
+    	            nikto_features = parse_nikto_output(output_file)
+    	            if nikto_features is not None:
+    	                all_features.update(nikto_features)
+    	                self.output_text.insert(tk.END, f"[+] Nikto completed. Found {nikto_features.get('nikto_high_risk_findings', 0)} high-risk findings.\n")
+    	            else:
+    	                self.output_text.insert(tk.END, "[!] Failed to parse Nikto results.\n")
+    	        else:
+    	            self.output_text.insert(tk.END, "[!] Nikto scan failed or was cancelled.\n")
+            
+    	        self.window.update()
+        
+    	    if self.scanning and scan_successful:
+    	        # AI PREDICTION PHASE
+    	        self.output_text.insert(tk.END, "\n[+] Running AI vulnerability analysis...\n")
+    	        self.window.update()
+    	        self.progress_bar.set(0.9)
+    	        self.progress_label.configure(text="AI Analysis...")
+            
+    	        # Run AI prediction
+    	        ai_prediction, cvss_score = self.predict_vulnerabilities(all_features)
+            
+    	        # Display AI results
+    	        self.ai_result_label.configure(text=ai_prediction)
+            
+    	        self.output_text.insert(tk.END, f"[+] AI analysis completed: {ai_prediction}\n")
+    	        
+    	        # === SAVE THE FEATURES TO JSON FILE ===
+    	        try:
+    	            import os
+    	            # Create data directory if it doesn't exist
+    	            os.makedirs("data", exist_ok=True)
+                
+    	            # Save features file
+    	            features_filename = f"data/{target}_features.json"
+    	            with open(features_filename, 'w') as f:
+    	                json.dump(all_features, f, indent=4)
+                
+    	            self.output_text.insert(tk.END, f"[+] Features saved to: {features_filename}\n")
+    	            print(f"Features saved to: {features_filename}")
+                
+    	        except Exception as e:
+    	            self.output_text.insert(tk.END, f"[!] Failed to save features file: {str(e)}\n")
+            
+    	        self.output_text.insert(tk.END, "Scan and analysis completed successfully.\n")
+            
+    	        # Add to history
+    	        new_scan = {
+    	            "target": target,
+    	            "status": "Completed",
+    	            "tools": tools,
+    	            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    	            "prediction": f"{ai_prediction} (CVSS: {cvss_score})"
+    	        }
+    	        self.scan_history.insert(0, new_scan)
+                
+    	except Exception as e:
+    	    self.output_text.insert(tk.END, f"\n[!] Error during scan: {str(e)}\n")
+    	    import traceback
+    	    self.output_text.insert(tk.END, f"Detailed error: {traceback.format_exc()}\n")
+    	    scan_successful = False
+    
+    	finally:
+    	    self.scanning = False
+    	    self.start_btn.configure(state="normal")
+    	    self.stop_btn.configure(state="disabled")
+    	    self.progress_bar.set(1.0)
+    	    self.progress_label.configure(text="Scan completed!")
+    	    self.status_label.configure(text="Ready")
+    	    print(f"Scan completed. Features collected: {all_features}")
+        
+    def predict_vulnerabilities(self, features):
+        """Predict vulnerabilities based on scan features"""
+        # TODO: Replace this with your trained AI model
+        # This is a simple heuristic-based prediction for demonstration
+        
+        high_risk_indicators = 0
+        
+        # Check for common vulnerability indicators
+        if features.get('port_21_open', 0) == 1:
+            high_risk_indicators += 1  # FTP often has vulnerabilities
+        if features.get('port_445_open', 0) == 1:
+            high_risk_indicators += 1  # SMB often has vulnerabilities
+        if features.get('version_contains_old', 0) == 1:
+            high_risk_indicators += 2  # Old versions are high risk
+        if features.get('nikto_high_risk_findings', 0) > 0:
+            high_risk_indicators += features['nikto_high_risk_findings']
+        if features.get('path_contains_admin', 0) == 1:
+            high_risk_indicators += 1  # Admin paths are interesting
+        
+        # Simple risk assessment
+        if high_risk_indicators >= 3:
+            return "🔴 HIGH RISK: Multiple vulnerability indicators detected", 8.5
+        elif high_risk_indicators >= 1:
+            return "🟡 MEDIUM RISK: Some vulnerability indicators found", 5.2
+        else:
+            return "🟢 LOW RISK: No significant vulnerabilities detected", 2.1
+
+    def stop_scan(self):
+        """Stop the scanning process"""
+        self.scanning = False
+        self.output_text.insert(tk.END, "\nScan interrupted by user.\n")
+        self.ai_result_label.configure(text="Scan cancelled. No AI analysis performed.")
+        self.start_btn.configure(state="normal")
+        self.stop_btn.configure(state="disabled")
+        self.progress_label.configure(text="Scan cancelled")
+        self.status_label.configure(text="Ready")
+        
+    def export_pdf(self):
+        """Export scan results to PDF"""
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
+        )
+        if file_path:
+            messagebox.showinfo("Export", f"Scan results would be exported to:\n{file_path}")
+
     def create_history_interface(self):
         """Create scan history interface"""
         scroll_frame = ctk.CTkScrollableFrame(self.main_content)
@@ -489,198 +726,6 @@ This tool is designed for educational and professional security assessment purpo
     def save_settings(self):
         """Save scanner settings"""
         messagebox.showinfo("Settings", "Scanner settings saved successfully!")
-        
-    def start_scan(self):
-        """Start the scanning process"""
-        target = self.target_entry.get().strip()
-        if not target:
-            messagebox.showerror("Error", "Please enter a target")
-            return
-            
-        selected_tools = [tool for tool, var in self.tool_vars.items() if var.get()]
-        if not selected_tools:
-            messagebox.showerror("Error", "Please select at least one tool")
-            return
-        
-        # Get selected options
-        scan_options = {
-            "nmap_args": self.nmap_custom_entry.get().strip(),
-            "gobuster_wordlist": self.custom_wordlist_entry.get().strip() or self.wordlist_var.get(),
-            "nikto_tuning": self.nikto_tuning_var.get()
-        }
-        
-        self.scanning = True
-        self.start_btn.configure(state="disabled")
-        self.stop_btn.configure(state="normal")
-        self.ai_result_label.configure(text="Scan in progress... AI analysis pending.")
-        self.status_label.configure(text="Scanning...")
-        
-        # Start scanning in a separate thread with options
-        scan_thread = threading.Thread(target=self.run_scan, args=(target, selected_tools, scan_options))
-        scan_thread.daemon = True
-        scan_thread.start()
-        
-    def run_scan(self, target, tools, scan_options):
-        """Run the actual scan using the scanning engine"""
-        self.output_text.delete("1.0", tk.END)
-        self.output_text.insert(tk.END, "Starting scan...\n")
-        self.window.update()
-        
-        all_features = {}
-        scan_successful = True
-        
-        try:
-            # Run Nmap if selected
-            if "Nmap" in tools and self.scanning:
-                self.output_text.insert(tk.END, f"\n[+] Running Nmap with arguments: {scan_options['nmap_args']}\n")
-                self.window.update()
-                self.progress_bar.set(0.25)
-                self.progress_label.configure(text="Running Nmap...")
-                
-                # Build the full Nmap command
-                nmap_command = scan_options['nmap_args']
-                xml_file = run_nmap(target, nmap_command)
-                
-                if xml_file and self.scanning:
-                    nmap_features = parse_nmap_xml(xml_file)
-                    all_features.update(nmap_features)
-                    self.output_text.insert(tk.END, f"[+] Nmap completed. Found {nmap_features.get('total_open_ports', 0)} open ports.\n")
-                else:
-                    self.output_text.insert(tk.END, "[!] Nmap scan failed or was cancelled.\n")
-                    scan_successful = False
-                
-                self.window.update()
-            
-            # Run Gobuster if selected
-            if "Gobuster" in tools and self.scanning and scan_successful:
-                self.output_text.insert(tk.END, f"\n[+] Running Gobuster with wordlist: {scan_options['gobuster_wordlist']}\n")
-                self.window.update()
-                self.progress_bar.set(0.5)
-                self.progress_label.configure(text="Running Gobuster...")
-                
-                # Build Gobuster command
-                gobuster_command = f"dir -w {scan_options['gobuster_wordlist']}"
-                output_file = run_gobuster(target, gobuster_command)
-                
-                if output_file and self.scanning:
-                    gobuster_features = parse_gobuster_output(output_file)
-                    all_features.update(gobuster_features)
-                    self.output_text.insert(tk.END, f"[+] Gobuster completed. Found {gobuster_features.get('count_path_200', 0)} accessible paths.\n")
-                else:
-                    self.output_text.insert(tk.END, "[!] Gobuster scan failed or was cancelled.\n")
-                    scan_successful = False
-                
-                self.window.update()
-            
-            # Run Nikto if selected
-            if "Nikto" in tools and self.scanning and scan_successful:
-                self.output_text.insert(tk.END, f"\n[+] Running Nikto with tuning: {scan_options['nikto_tuning']}\n")
-                self.window.update()
-                self.progress_bar.set(0.75)
-                self.progress_label.configure(text="Running Nikto...")
-                
-                # Build Nikto command with tuning if specified
-                nikto_command = ""
-                if scan_options['nikto_tuning'] != "Default":
-                    tuning_value = scan_options['nikto_tuning'].split('(')[1].split(')')[0]
-                    nikto_command = f"-Tuning {tuning_value}"
-                    
-                output_file = run_nikto(target, nikto_command)
-                
-                if output_file and self.scanning:
-                    nikto_features = parse_nikto_output(output_file)
-                    all_features.update(nikto_features)
-                    self.output_text.insert(tk.END, f"[+] Nikto completed. Found {nikto_features.get('nikto_high_risk_findings', 0)} high-risk findings.\n")
-                else:
-                    self.output_text.insert(tk.END, "[!] Nikto scan failed or was cancelled.\n")
-                    scan_successful = False
-                
-                self.window.update()
-            
-            if self.scanning and scan_successful:
-                # AI PREDICTION PHASE
-                self.output_text.insert(tk.END, "\n[+] Running AI vulnerability analysis...\n")
-                self.window.update()
-                self.progress_bar.set(0.9)
-                self.progress_label.configure(text="AI Analysis...")
-                
-                # Run AI prediction
-                ai_prediction, cvss_score = self.predict_vulnerabilities(all_features)
-                
-                # Display AI results
-                self.ai_result_label.configure(text=ai_prediction)
-                
-                self.output_text.insert(tk.END, f"[+] AI analysis completed: {ai_prediction}\n")
-                self.output_text.insert(tk.END, "Scan and analysis completed successfully.\n")
-                
-                # Add to history
-                new_scan = {
-                    "target": target,
-                    "status": "Completed",
-                    "tools": tools,
-                    "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "prediction": f"{ai_prediction} (CVSS: {cvss_score})"
-                }
-                self.scan_history.insert(0, new_scan)
-                
-        except Exception as e:
-            self.output_text.insert(tk.END, f"\n[!] Error during scan: {str(e)}\n")
-            scan_successful = False
-        
-        finally:
-            self.scanning = False
-            self.start_btn.configure(state="normal")
-            self.stop_btn.configure(state="disabled")
-            self.progress_bar.set(1.0)
-            self.progress_label.configure(text="Scan completed!")
-            self.status_label.configure(text="Ready")
-            print(f"Scan completed. Features collected: {all_features}")
-    
-    def predict_vulnerabilities(self, features):
-        """Predict vulnerabilities based on scan features"""
-        # TODO: Replace this with your trained AI model
-        # This is a simple heuristic-based prediction for demonstration
-        
-        high_risk_indicators = 0
-        
-        # Check for common vulnerability indicators
-        if features.get('port_21_open', 0) == 1:
-            high_risk_indicators += 1  # FTP often has vulnerabilities
-        if features.get('port_445_open', 0) == 1:
-            high_risk_indicators += 1  # SMB often has vulnerabilities
-        if features.get('version_contains_old', 0) == 1:
-            high_risk_indicators += 2  # Old versions are high risk
-        if features.get('nikto_high_risk_findings', 0) > 0:
-            high_risk_indicators += features['nikto_high_risk_findings']
-        if features.get('path_contains_admin', 0) == 1:
-            high_risk_indicators += 1  # Admin paths are interesting
-        
-        # Simple risk assessment
-        if high_risk_indicators >= 3:
-            return "🔴 HIGH RISK: Multiple vulnerability indicators detected", 8.5
-        elif high_risk_indicators >= 1:
-            return "🟡 MEDIUM RISK: Some vulnerability indicators found", 5.2
-        else:
-            return "🟢 LOW RISK: No significant vulnerabilities detected", 2.1
-        
-    def stop_scan(self):
-        """Stop the scanning process"""
-        self.scanning = False
-        self.output_text.insert(tk.END, "\nScan interrupted by user.\n")
-        self.ai_result_label.configure(text="Scan cancelled. No AI analysis performed.")
-        self.start_btn.configure(state="normal")
-        self.stop_btn.configure(state="disabled")
-        self.progress_label.configure(text="Scan cancelled")
-        self.status_label.configure(text="Ready")
-        
-    def export_pdf(self):
-        """Export scan results to PDF"""
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".pdf",
-            filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
-        )
-        if file_path:
-            messagebox.showinfo("Export", f"Scan results would be exported to:\n{file_path}")
             
     def run(self):
         """Start the application"""

@@ -1,0 +1,34 @@
+- Nikto v2.5.0/
++ Target Host: 192.168.112.129
++ Target Port: 80
++ GET /hackazon/: The anti-clickjacking X-Frame-Options header is not present. See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options: 
++ GET /hackazon/: The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type. See: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/: 
++ GET /hackazon/: Directory indexing found.
++ GET /hackazon/bin/: Directory indexing found.
++ HEAD /hackazon: Apache/2.4.41 appears to be outdated (current is at least Apache/2.4.54). Apache 2.2.34 is the EOL for the 2.x branch.
++ OPTIONS OPTIONS: Allowed HTTP Methods: OPTIONS, HEAD, GET, POST .
++ GET /hackazon/./: Directory indexing found.
++ GET /hackazon/./: Appending '/./' to a directory allows indexing.
++ GET /hackazon//: Directory indexing found.
++ GET /hackazon//: Apache on Red Hat Linux release 9 reveals the root directory listing by default if there is no index page.
++ GET /hackazon/%2e/: Directory indexing found.
++ GET /hackazon/%2e/: Weblogic allows source code or directory listing, upgrade to v6.0 SP1 or higher. See: BID-2513: 
++ GET /hackazon///: Directory indexing found.
++ GET /hackazon/web/: PHP error reveals file system path.
++ GET /hackazon/?PageServices: The remote server may allow directory listings through Web Publisher by forcing the server to show all files via 'open directory browsing'. Web Publisher should be disabled. See: CVE-1999-0269: 
++ GET /hackazon/?wp-cs-dump: The remote server may allow directory listings through Web Publisher by forcing the server to show all files via 'open directory browsing'. Web Publisher should be disabled. See: CVE-1999-0269: 
++ GET /hackazon/bin/: This might be interesting.
++ GET /hackazon/web/: This might be interesting.
++ GET /hackazon/database/: Directory indexing found.
++ GET /hackazon/database/: Database directory found.
++ GET /hackazon/docs/: Directory indexing found.
++ GET /hackazon///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////: Directory indexing found.
++ GET /hackazon///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////: Abyss 1.03 reveals directory listing when multiple /'s are requested. See: CVE-2002-1078: 
++ GET /hackazon/web/index.php: PHP error reveals file system path.
++ GET /hackazon/.git/index: Git Index file may contain directory listing information.
++ GET /hackazon/.git/HEAD: Git HEAD file found. Full repo details may be present.
++ GET /hackazon/.git/config: Git config file found. Infos about repo details may be present.
++ GET /hackazon/composer.json: PHP Composer configuration file reveals configuration information. See: https://getcomposer.org/: 
++ GET /hackazon/composer.lock: PHP Composer configuration file reveals configuration information. See: https://getcomposer.org/: 
++ GET /hackazon/.gitignore: .gitignore file found. It is possible to grasp the directory structure.
++ GET /hackazon/README.md: Readme Found.

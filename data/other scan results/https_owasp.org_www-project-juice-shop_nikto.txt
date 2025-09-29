@@ -1,0 +1,13 @@
+- Nikto v2.5.0/
++ Target Host: owasp.org
++ Target Port: 443
++ GET /www-project-juice-shop/: Retrieved via header: 1.1 varnish.
++ GET /www-project-juice-shop/: Retrieved x-served-by header: cache-kul9822-KUL.
++ GET /www-project-juice-shop/: Retrieved access-control-allow-origin header: *.
++ GET /www-project-juice-shop/: Fastly CDN was identified by the x-timer header. See: https://www.fastly.com/: 
++ GET /www-project-juice-shop/: Uncommon header 'x-github-request-id' found, with contents: 35B8:08DC:1187B7:1262C2:68B5CD03.
++ GET /www-project-juice-shop/: Uncommon header 'x-proxy-cache' found, with contents: MISS.
++ GET /www-project-juice-shop/: Uncommon header 'x-fastly-request-id' found, with contents: 8639305fe2df2eb4a7b92be5a3e5eecd36eae37b.
++ GET /www-project-juice-shop/: Uncommon header 'x-served-by' found, with contents: cache-kul9822-KUL.
++ GET /www-project-juice-shop/TDbqvmJS.nsconfig: Uncommon header 'x-origin-cache' found, with contents: HIT.
++ GET /www-project-juice-shop/TDbqvmJS.tmp: The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type. See: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/: 
